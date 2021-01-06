@@ -58,6 +58,20 @@ void PatchUtils::patchCallInstruction(void* patchOff, void* func, bool jump) {
     memcpy(&data[4], &func, sizeof(int));
     Log::trace(TAG, "Patching - result: %i %i %i %i %i", data[0], data[1], data[2], data[3], data[4]);
 #else
+#ifdef __x86_64__
+    if (jump) {
+        // encoding: 48 b8 <desired 64-bit address> mov rax, <desired 64-bit address>
+        //           ff e0                          jmp rax
+        data[0] = 0x48;
+        data[1] = 0xb8;
+        intptr_t ptr = (intptr_t) func;
+        memcpy(&data[2], &ptr, sizeof(intptr_t));
+        data[10] = 0xff;
+        data[11] = 0xe0;
+        Log::trace(TAG, "Patching - result: %i %i %i %i %i", data[0], data[1], data[2], data[3], data[4]);
+	return;
+    }
+#endif
     Log::trace(TAG, "Patching - original: %i %i %i %i %i", data[0], data[1], data[2], data[3], data[4]);
     data[0] = (unsigned char) (jump ? 0xe9 : 0xe8);
     intptr_t ptr = (((intptr_t) func) - (intptr_t) patchOff - 5);
